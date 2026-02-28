@@ -1,0 +1,165 @@
+# Image Dehazing Pipeline Configuration
+
+project:
+  name: "Image Dehazing NTIRE Challenge"
+  version: "1.0.0"
+  description: "Dehazing pipeline with multiple model architectures"
+
+# Data Configuration
+data:
+  raw_dir: "data/raw"
+  processed_dir: "data/processed"
+  datasets:
+    - name: "I-Haze"
+      path: "data/raw/I-Haze"
+      synthetic: true
+      num_images: 25
+    - name: "N-Haze"
+      path: "data/raw/N-Haze"
+      synthetic: false
+      num_images: 45
+    - name: "Dense-Haze"
+      path: "data/raw/Dense-Haze"
+      synthetic: false
+      num_images: 50
+
+  img_size: [256, 256] # Target size for inference
+  img_format: "RGB"
+
+# Model Configuration
+models:
+  primary: "AODNet" # Primary model to deploy
+  alternatives:
+    - "DehazeNet"
+    - "PFFNet"
+    - "DCP" # Dark Channel Prior (non-neural)
+
+  aodnet:
+    in_channels: 3
+    depth: 8
+    pretrained: true
+    checkpoint: "models/aodnet_pretrained.pth"
+
+  dehazenet:
+    depth: 20
+    pretrained: false
+    checkpoint: "models/dehazenet.pth"
+
+  pffnet:
+    depth: 8
+    pretrained: false
+    checkpoint: "models/pffnet.pth"
+
+# Inference Configuration
+inference:
+  device: "cuda" # "cuda" or "cpu"
+  batch_size: 1
+  num_workers: 4
+  input_dir: "data/raw"
+  output_dir: "results/dehazed_images"
+  save_visualization: true
+  visualization_format: "jpg" # jpg, png
+
+# Evaluation Configuration
+evaluation:
+  metrics:
+    - "psnr"
+    - "ssim"
+    - "lpips" # Optional: LPIPS perceptual metric
+
+  metrics_output: "results/metrics.csv"
+  comparison_output: "results/visual_comparisons"
+
+  psnr:
+    enabled: true
+    max_pixel_value: 255
+
+  ssim:
+    enabled: true
+    data_range: 255
+    window_size: 11
+
+  hallucination_check: true
+
+# Haze Generation Configuration
+haze_generation:
+  enabled: true
+  output_dir: "data/synthetic_haze"
+  methods:
+    - "atmospheric_scattering" # Based on Dark Channel Prior
+    - "gaussian_blur_color_shift"
+    - "depth_based_progressive"
+
+  atmospheric_scattering:
+    beta_values: [0.3, 0.5, 0.8, 1.0] # Haze intensity
+    airlight_variation: true
+
+  intensity_range: [0.1, 1.0] # Min to max haze intensity
+
+# Web Dashboard Configuration
+web:
+  framework: "gradio" # "gradio" or "flask"
+  host: "0.0.0.0"
+  port: 7860 # Gradio default
+
+  gradio:
+    share: false
+    debug: true
+    queue: true
+    max_size: 10
+
+  flask:
+    port: 5000
+    debug: true
+
+# Training Configuration (if fine-tuning models)
+training:
+  epochs: 100
+  batch_size: 8
+  learning_rate: 0.0001
+  optimizer: "adam"
+  loss_function: "l1" # l1, l2, perceptual, composite
+
+  data_augmentation:
+    enabled: true
+    random_flip: true
+    random_rotate: true
+    color_jitter: true
+
+  validation_split: 0.2
+  checkpoint_dir: "models/checkpoints"
+
+# Logging Configuration
+logging:
+  level: "INFO"
+  log_dir: "results/logs"
+  save_plots: true
+  log_metrics_interval: 10 # Every N iterations
+
+# Performance Thresholds
+performance:
+  target_psnr: 25.0 # PSNR >= 25dB
+  target_ssim: 0.85 # SSIM >= 0.85
+  hallucination_tolerance: 0.1 # Allow 10% hallucination score max
+
+# Batch processing
+batch_processing:
+  enabled: true
+  num_workers: 4
+  prefetch_factor: 2
+  pin_memory: true
+
+# Paths
+paths:
+  models: "models/"
+  data: "data/"
+  results: "results/"
+  notebooks: "notebooks/"
+  scripts: "scripts/"
+  src: "src/"
+
+# Model/Inference Performance Optimization
+optimization:
+  mixed_precision: true # Use FP16 where applicable
+  gradient_checkpointing: false
+  model_quantization: false # INT8 quantization for inference speedup
