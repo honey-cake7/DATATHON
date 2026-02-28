@@ -173,7 +173,10 @@ Generate synthetic haze using:
 
 ## Team
 
-[Add your team details here]
+Aniket Patil
+Sujith Pedapati
+Lakshya Patidar
+Vishwajeet Singh Bhati
 
 ## References
 
@@ -182,10 +185,4 @@ Generate synthetic haze using:
 3. Dong, H., Pan, Y., Zhang, L., et al. (2020). Multi-scale Boosted Dehazing Network.
 4. Choi, L. K., You, J., & Bovik, A. C. (2015). Referenceless Prediction of Perceptual Fog Density.
 
-## License
 
-[Add license information]
-
----
-
-**Last Updated**: February 2026

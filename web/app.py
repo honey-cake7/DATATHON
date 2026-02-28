@@ -132,7 +132,7 @@ def create_interface() -> gr.Blocks:
     device = "cuda" if torch.cuda.is_available() else "cpu"
     
     dashboard = DehazeDashboard(
-        model_name="AODNet",
+        model_name="DehazeNet",
         device=device
     )
     
@@ -255,9 +255,9 @@ def create_interface() -> gr.Blocks:
         
         # Info section
         gr.Markdown(
-            f"""
+f"""
             ## ℹ️ System Information
-            - **Model**: AODNet (All-in-One Dehazing Network)
+            - **Model**: DehazeNet (Lightweight Dehazing Network)
             - **Device**: {device.upper()}
             - **Input Size**: 256×256 (auto-resized)
             
