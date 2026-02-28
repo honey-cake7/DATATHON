@@ -1,40 +1,63 @@
-# Image Dehazing - NTIRE Challenge Datathon
+# Image Dehazing
 
-**Objective**: Build a complete Image Dehazing pipeline to improve visibility in hazy/smoggy images, with applications in road safety, traffic surveillance, and smart-city infrastructure.
+**Objective**: Build a complete image dehazing pipeline to improve visibility in hazy/smoggy images, with applications in road safety, traffic surveillance, and smart-city infrastructure.
 
 ## Project Overview
 
-This project implements multiple deep learning models for image dehazing, benchmarks them against standard datasets (I-Haze, N-Haze, Dense-Haze), and deploys the best model as an interactive web dashboard.
+This project uses **DehazeFormer**, a transformer-based architecture, to remove haze from images. It includes 19 pretrained model checkpoints (across 4 dataset categories), an interactive **Streamlit web dashboard** for dehazing, synthetic haze generation, and automated **SSIM / PSNR evaluation** on three benchmark datasets — I-HAZE, NH-HAZE, and Dense-Haze — with per-dataset log files.
 
 ### Key Features
 
-- **Multiple Model Architectures**: Implementation of state-of-the-art dehazing models (DehazeNet, AODNet, PFFNet, or similar)
-- **Inference Pipeline**: Clean, modular inference scripts for batch processing
-- **Web Dashboard**: Interactive Gradio/Flask app for real-time dehazing
-- **Haze Generation**: Pipeline to artificially add haze using image processing techniques
-- **Performance Metrics**: PSNR and SSIM evaluation on standard datasets
-- **Hallucination Check**: Structural fidelity validation to prevent artificial detail generation
+- **DehazeFormer Architecture** — Transformer with window-based multi-head self-attention (787,907 parameters)
+- **19 Pretrained Models** — Weights for indoor, outdoor, RESIDE-6K, and RS-Haze datasets (sizes: tiny → large)
+- **Web Dashboard** — Streamlit app with three tabs: Dehaze, Haze Generation, Dataset Evaluation
+- **Haze Generation** — Atmospheric scattering model, Gaussian blur + color shift, depth-based progressive haze
+- **Evaluation Metrics** — SSIM and PSNR computed per-image against ground truth, with separate log files per dataset
+- **Additional Architectures** — DehazeNet, AODNet, PFFNet, Dark Channel Prior also implemented in `src/models/`
 
 ## Directory Structure
 
 ```
 .
-├── data/
-│   ├── raw/                    # Original datasets (I-Haze, N-Haze, Dense-Haze)
-│   └── processed/              # Preprocessed images
-├── models/                     # Pre-trained model weights
-├── notebooks/                  # Exploratory notebooks and analysis
+├── config.yaml                         # Model & pipeline configuration
+├── requirements.txt                    # Python dependencies
+├── README.md
+│
+├── web/
+│   └── streamlit_dehazer.py            # Main dashboard (dehaze + haze gen + evaluation)
+│
 ├── src/
-│   ├── models/                 # Model architecture definitions
-│   ├── inference/              # Inference pipelines
-│   ├── metrics/                # Evaluation metrics (PSNR, SSIM)
-│   └── haze_generation/        # Haze synthesis pipeline
-├── web/                        # Web dashboard (Gradio/Flask)
-├── scripts/                    # Utility scripts
-├── results/                    # Output images and metrics
-├── requirements.txt            # Python dependencies
-├── config.yaml                 # Configuration file
-└── README.md
+│   ├── models/
+│   │   └── architectures.py            # DehazeFormer, DehazeNet, AODNet, PFFNet, DCP
+│   ├── inference/
+│   │   └── dehaze.py                   # Inference pipeline
+│   ├── metrics/
+│   │   └── evaluation.py               # SSIM, PSNR, MSE, MAE calculation
+│   └── haze_generation/
+│       └── generator.py                # Synthetic haze generation (3 methods)
+│
+├── models/                             # Pretrained DehazeFormer weights (.pth)
+│   ├── indoor/     (7 models: t, s, m, b, d, w, l)
+│   ├── outdoor/    (4 models: t, s, m, b)
+│   ├── reside6k/   (4 models: t, s, m, b)
+│   └── rshaze/     (4 models: t, s, m, b)
+│
+├── data/                               # Benchmark datasets
+│   ├── Dense_Haze/  (GT/ + hazy/)      — 55 image pairs
+│   ├── I-HAZE/      (train/val/test)   — 35 image pairs
+│   └── NH-HAZE/     (NH-GT/ + NH-hazy/)— 55 image pairs
+│
+├── results/
+│   └── logs/                           # Evaluation log files (generated at runtime)
+│       ├── DENSEHAZE_evaluation.log
+│       ├── IHAZE_evaluation.log
+│       └── NHHAZE_evaluation.log
+│
+├── notebooks/
+│   └── 01_image_dehazing_pipeline.ipynb
+│
+└── scripts/
+    └── utilities.py
 ```
 
 ## Installation & Setup
@@ -42,21 +65,23 @@ This project implements multiple deep learning models for image dehazing, benchm
 ### Prerequisites
 
 - Python 3.8+
-- CUDA 11.x (for GPU acceleration, optional)
+- CUDA (optional — works fully on CPU)
 
 ### Steps
 
-1. **Clone/Navigate to project**:
+1. **Clone the repository**:
 
 ```bash
-cd c:\Coding\DATATHON
+git clone https://github.com/honey-cake7/DATATHON.git
+cd DATATHON
 ```
 
-2. **Create virtual environment** (optional but recommended):
+2. **Create virtual environment** (recommended):
 
 ```bash
-python -m venv venv
-venv\Scripts\activate  # Windows
+python -m venv .venv
+.venv\Scripts\activate        # Windows
+# source .venv/bin/activate   # Linux/macOS
 ```
 
 3. **Install dependencies**:
@@ -65,124 +90,124 @@ venv\Scripts\activate  # Windows
 pip install -r requirements.txt
 ```
 
-4. **Download datasets**:
-   - I-Haze: [NTIRE Challenge](https://github.com/cszn/NTIRE2018)
-   - N-Haze: [Dataset Link](https://nhaze.github.io/)
-   - Dense-Haze: [Dataset Link](https://www.dropbox.com/sh/86b86d3n1g6b9lx/AABQrNqVPrB3xQU4Fs7fFI3Ea)
+4. **Download pretrained weights** (if not included):
 
-   Place in `data/raw/`
+   Place `.pth` files in `models/<dataset>/` folders. Expected structure:
+
+   ```
+   models/
+   ├── indoor/dehazeformer-t.pth  ... dehazeformer-l.pth
+   ├── outdoor/dehazeformer-t.pth ... dehazeformer-b.pth
+   ├── reside6k/dehazeformer-t.pth ... dehazeformer-b.pth
+   └── rshaze/dehazeformer-t.pth  ... dehazeformer-b.pth
+   ```
+
+5. **Download datasets** (if not included):
+   - [I-HAZE](https://data.vision.ee.ethz.ch/cvl/ntire18//i-haze/)
+   - [NH-HAZE](https://data.vision.ee.ethz.ch/cvl/ntire20/nh-haze/)
+   - [Dense-Haze](https://data.vision.ee.ethz.ch/cvl/ntire19//dense-haze/)
+
+   Place in `data/` following the directory structure above.
 
 ## Usage
 
-### 1. Model Inference
+### Launch the Web Dashboard
 
 ```bash
-python src/inference/dehaze.py --input <hazy_image> --output <output_path> --model <model_name>
+streamlit run web/streamlit_dehazer.py
 ```
 
-### 2. Batch Processing
+Opens at **http://localhost:8501** with three tabs:
 
-```bash
-python scripts/process_dataset.py --input_dir data/raw --output_dir data/processed
-```
+| Tab                    | Description                                                                       |
+| ---------------------- | --------------------------------------------------------------------------------- |
+| **Dehaze Image**       | Upload a hazy image → get dehazed output with SSIM/PSNR + PNG download            |
+| **Generate Haze**      | Upload a clear image → add synthetic haze (3 methods) → optionally dehaze it back |
+| **Dataset Evaluation** | Run SSIM & PSNR on I-HAZE, NH-HAZE, Dense-Haze → saves separate `.log` files      |
 
-### 3. Evaluate on Dataset
+### Web Dashboard Screenshots
 
-```bash
-python scripts/evaluate_metrics.py --dataset_dir data/processed --output results/metrics.csv
-```
+**Dehaze tab**: Upload → select model from sidebar → click Dehaze → view side-by-side with metrics.
 
-### 4. Launch Web Dashboard
+**Haze Generation tab**: Choose method (atmospheric scattering / gaussian blur / depth progressive) and intensity slider.
 
-```bash
-python web/app.py
-```
+**Evaluation tab**: Select datasets → click Run Evaluation → per-image SSIM/PSNR table + downloadable log files.
 
-Then navigate to `http://localhost:7860` (Gradio) or `http://localhost:5000` (Flask)
+## Pretrained Models
 
-### 5. Generate Haze & Dehaze
+19 DehazeFormer checkpoints organized by training dataset:
 
-```bash
-python scripts/haze_generation_demo.py --image <clear_image> --intensity 0.5
-```
+| Folder      | Models | Sizes                                              |
+| ----------- | ------ | -------------------------------------------------- |
+| `indoor/`   | 7      | dehazeformer-t (2.9 MB) → dehazeformer-l (98.2 MB) |
+| `outdoor/`  | 4      | dehazeformer-t → dehazeformer-b                    |
+| `reside6k/` | 4      | dehazeformer-t → dehazeformer-b                    |
+| `rshaze/`   | 4      | dehazeformer-t → dehazeformer-b                    |
+
+Model variants: **t** (tiny), **s** (small), **m** (medium), **b** (base), **d**, **w** (wide), **l** (large).
+
+Select any model from the sidebar dropdown in the dashboard.
 
 ## Evaluation Metrics
 
-- **PSNR** (Peak Signal-to-Noise Ratio): Measures pixel-level accuracy
-- **SSIM** (Structural Similarity Index): Measures perceptual similarity
-- **FID** (Fréchet Inception Distance): Optional - measures distribution similarity
-- **Hallucination Score**: Manual inspection for artificial detail generation
+| Metric   | Description                                                  | Range                                   |
+| -------- | ------------------------------------------------------------ | --------------------------------------- |
+| **SSIM** | Structural Similarity Index — measures perceptual similarity | 0 to 1 (higher = better)                |
+| **PSNR** | Peak Signal-to-Noise Ratio — measures pixel-level fidelity   | dB (higher = better, typical: 15–35 dB) |
+
+Evaluation computes **dehazed vs ground truth** for each image pair. Results are saved as separate log files:
+
+```
+results/logs/
+├── DENSEHAZE_evaluation.log    # 55 images
+├── IHAZE_evaluation.log        # 35 images
+└── NHHAZE_evaluation.log       # 55 images
+```
+
+Each log contains per-image SSIM/PSNR values and dataset averages.
 
 ## Datasets
 
-| Dataset        | Hazy Images | Scene Type            | Link                                                  |
-| -------------- | ----------- | --------------------- | ----------------------------------------------------- |
-| **I-Haze**     | 25          | Synthetic indoor      | [NTIRE2018](https://github.com/cszn/NTIRE2018)        |
-| **N-Haze**     | 45          | Natural outdoor       | [Dataset](https://nhaze.github.io/)                   |
-| **Dense-Haze** | 50          | Dense haze conditions | [Dropbox](https://www.dropbox.com/sh/86b86d3n1g6b9lx) |
+| Dataset        | Image Pairs | Structure                                   | Description               |
+| -------------- | ----------- | ------------------------------------------- | ------------------------- |
+| **I-HAZE**     | 35          | train/val/test splits with clear/ and hazy/ | Indoor synthetic haze     |
+| **NH-HAZE**    | 55          | NH-GT/ and NH-hazy/                         | Non-homogeneous real haze |
+| **Dense-Haze** | 55          | GT/ and hazy/                               | Dense real-world haze     |
 
-## Model Selection
+## Model Architecture
 
-You can test multiple models:
+**DehazeFormer** — Transformer-based image restoration model:
 
-1. **DehazeNet** - Lightweight CNN-based approach
-2. **AODNet** (All-in-One Dehazing Network) - Multi-scale features
-3. **PFFNet** - Progressive fusion framework
-4. **Pretrained Models**: YOLOv5, BRISQUE for auxiliary tasks
+- 12 transformer blocks with window-based attention
+- 8 attention heads, 64-dim embeddings
+- Multi-scale feature extraction + skip connections
+- Input/Output: 3×256×256 RGB
+- Parameters: 787,907
 
-Modify `config.yaml` to select which models to train/evaluate.
+Additional architectures available in `src/models/architectures.py`:
 
-## Results
+- **DehazeNet** — Lightweight CNN (residual blocks)
+- **AODNet** — All-in-One encoder-decoder with skip connections
+- **PFFNet** — Progressive fusion framework
+- **Dark Channel Prior** — Classical non-neural baseline
 
-After running evaluations, results are saved in `results/` directory:
+## Haze Generation
 
-```
-results/
-├── metrics.csv          # PSNR, SSIM scores per image
-├── visualizations/      # Side-by-side comparisons
-└── logs/               # Training/inference logs
-```
+Three synthetic haze methods in `src/haze_generation/generator.py`:
 
-## Bonus Features
+| Method                          | Description                                                           |
+| ------------------------------- | --------------------------------------------------------------------- |
+| **Atmospheric Scattering**      | Physics-based: $I(x) = J(x) \cdot e^{-\beta d} + A(1 - e^{-\beta d})$ |
+| **Gaussian Blur + Color Shift** | Blur + white haze color overlay                                       |
+| **Depth-Based Progressive**     | More haze at bottom of image (simulating depth)                       |
 
-### Haze Generation
+Adjustable intensity (0.1–1.0) via the dashboard slider.
 
-Generate synthetic haze using:
-
-- Atmospheric scattering model
-- Gaussian blur + color shift
-- Depth-based progressive haze
-
-### Qualitative Analysis
-
-- Visual comparisons on test images
-- Hallucination detection via manual inspection
-- Failure case analysis
-
-## Points Distribution
-
-| Category                          | Points  |
-| --------------------------------- | ------- |
-| Model Selection & Pipeline        | 30      |
-| Hallucination Check & Performance | 35      |
-| Viva                              | 10      |
-| Innovation                        | 10      |
-| Bonus/Optional Task               | 10      |
-| Web Dashboard                     | 5       |
-| **Total**                         | **100** |
 
 ## Team
 
-Aniket Patil
-Sujith Pedapati
-Lakshya Patidar
-Vishwajeet Singh Bhati
-
-## References
-
-1. He, K., Sun, J., & Tang, X. (2009). Single image haze removal using dark channel prior.
-2. Li, B., Peng, X., Wang, Z., et al. (2019). AODNet: All-in-One Dehazing Network.
-3. Dong, H., Pan, Y., Zhang, L., et al. (2020). Multi-scale Boosted Dehazing Network.
-4. Choi, L. K., You, J., & Bovik, A. C. (2015). Referenceless Prediction of Perceptual Fog Density.
-
+- Aniket Patil
+- Sujith Pedapati
+- Lakshya Patidar
+- Vishwajeet Singh Bhati
 
