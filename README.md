@@ -206,7 +206,7 @@ Adjustable intensity (0.1–1.0) via the dashboard slider.
 
 ## Team
 
-- Aniket Patil
+- Aniket Patil 124cs0081
 - Sujith Pedapati
 - Lakshya Patidar
 - Vishwajeet Singh Bhati
